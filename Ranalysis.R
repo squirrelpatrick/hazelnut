@@ -1,0 +1,64 @@
+# Data Wrangling Project
+
+# Set working directory
+setwd("~/Downloads/UCI HAR Dataset")
+
+# Load relevant files
+features      <- read.table("features.txt", sep = " ", header = FALSE)
+x_train       <- read.table("train/X_train.txt")
+x_test        <- read.table("test/X_test.txt")
+y_test        <- read.table("test/Y_test.txt")
+y_train       <- read.table("train/Y_train.txt")
+subject_test  <- read.table("test/subject_test.txt")
+subject_train <- read.table("train/subject_train.txt")
+
+# Merge sets TEST first then TRAIN
+subject <- rbind(subject_test, subject_train)
+x       <- rbind(x_test, x_train)
+y       <- rbind(y_test, y_train)
+
+# attach the names in features as the variables for the x dataframe
+colnames(x) <- features[, 2]
+
+# After checking successful remove the temporary objects
+rm(features, x_test, x_train, y_test, y_train, subject_train, subject_test)
+
+# integrate y and subject as first two columns for x and name
+x <- cbind(y, subject, x)
+colnames(x)[1:2]=c("ActivityLabel", "Subject")
+# database looking like it makes sense! :-)
+
+# we need to add 'activity names' - load, add into table as lookup
+activity_labels <- read.table("activity_labels.txt")
+colnames(activity_labels) <- c("ActivityLabel", "ActivityName")
+x1 <- left_join(x, activity_labels)
+
+# success! but our new column is tacked on the end! Putting new column second...
+x1 <- x1[, c(1, 564, 2:563)]
+
+# There doesn't seem to be a problem with duplicated column names in our dataset.
+# However features.txt features duplication. 
+# But looking at the sets it seems that the column names must have been coerced already.
+
+# As we seem to have no duplication, proceed
+# extracting columns for mean & standard deviation
+
+x1 <- x1 %>%
+  select(1:3, contains("mean"), contains("std"))
+
+# the dataframe x1 completes step 3
+
+# "4: From the data set in step 4, creates a second, independent tidy data set
+# with the average of each variable for each activity and each subject."
+
+# using 'summarise each' with ActivityName also grouped to keep the column meaningful
+
+x2 <- x1 %>%
+        group_by(ActivityLabel, ActivityName, Subject) %>%
+        summarise_each(funs(mean))
+
+#x2 provides the dataset for step4. 
+
+# checking the first entry
+mean(x1[(x1[,1]==1 & x1[,3]==1),4])
+# equates to the first mean given :)
